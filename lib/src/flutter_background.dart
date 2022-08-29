@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'android_config.dart';
+import 'package:flutter_background/src/android_config.dart';
 
 class FlutterBackground {
   static const MethodChannel _channel = MethodChannel('flutter_background');
@@ -24,12 +24,10 @@ class FlutterBackground {
           'android.notificationImportance': _androidNotificationImportanceToInt(
               androidConfig.notificationImportance),
           'android.notificationIconName': androidConfig.notificationIcon.name,
+          'android.notificationIconColor': androidConfig.notificationIconColor.value.toRadixString(16),
           'android.notificationIconDefType':
               androidConfig.notificationIcon.defType,
           'android.enableWifiLock': androidConfig.enableWifiLock,
-          'android.showBadge': androidConfig.showBadge,
-          'android.shouldRequestBatteryOptimizationsOff':
-              androidConfig.shouldRequestBatteryOptimizationsOff,
         }) ==
         true;
     return _isInitialized;

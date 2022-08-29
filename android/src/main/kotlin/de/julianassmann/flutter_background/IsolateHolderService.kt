@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import java.lang.Long.parseLong
 
 class IsolateHolderService : Service() {
     companion object {
@@ -95,18 +96,22 @@ class IsolateHolderService : Service() {
                 FlutterBackgroundPlugin.notificationImportance).apply {
                 description = FlutterBackgroundPlugin.notificationText
             }
-            channel.setShowBadge(FlutterBackgroundPlugin.showBadge)
             // Register the channel with the system
             val notificationManager: NotificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
 
+        // Get hex string and replace "0x" to be sure it is not in the string, then parse to int
+        val colorHex = FlutterBackgroundPlugin.notificationIconColor.replace("0x", "")
+        val color = parseLong(colorHex, 16).toInt()
+
         val imageId = resources.getIdentifier(FlutterBackgroundPlugin.notificationIconName, FlutterBackgroundPlugin.notificationIconDefType, packageName)
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(FlutterBackgroundPlugin.notificationTitle)
             .setContentText(FlutterBackgroundPlugin.notificationText)
             .setSmallIcon(imageId)
+            .setColor(color)
             .setContentIntent(pendingIntent)
             .setPriority(FlutterBackgroundPlugin.notificationImportance)
             .build()

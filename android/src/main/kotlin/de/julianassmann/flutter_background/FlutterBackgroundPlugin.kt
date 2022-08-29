@@ -35,6 +35,8 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     @JvmStatic
     val NOTIFICATION_ICON_NAME_KEY = "android.notificationIconName"
     @JvmStatic
+    val NOTIFICATION_ICON_COLOR_KEY = "android.notificationIconColor"
+    @JvmStatic
     val NOTIFICATION_ICON_DEF_TYPE_KEY = "android.notificationIconDefType"
     @JvmStatic
     val NOTIFICATION_TEXT_KEY = "android.notificationText"
@@ -42,10 +44,6 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     val NOTIFICATION_IMPORTANCE_KEY = "android.notificationImportance"
     @JvmStatic
     val ENABLE_WIFI_LOCK_KEY = "android.enableWifiLock"
-    @JvmStatic
-    val SHOW_BADGE_KEY = "android.showBadge"
-    @JvmStatic
-    val SHOULD_REQUEST_BATTERY_OPTIMIZATIONS_OFF_KEY = "android.shouldRequestBatteryOptimizationsOff"
 
     @JvmStatic
     var notificationTitle: String = "flutter_background foreground service"
@@ -56,13 +54,11 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     @JvmStatic
     var notificationIconName: String = "ic_launcher"
     @JvmStatic
+    var notificationIconColor: String = "ff000000"
+    @JvmStatic
     var notificationIconDefType: String = "mipmap"
     @JvmStatic
     var enableWifiLock: Boolean = true
-    @JvmStatic
-    var showBadge: Boolean = true
-    @JvmStatic
-    var shouldRequestBatteryOptimizationsOff: Boolean = true
 
 
     fun loadNotificationConfiguration(context: Context?) {
@@ -71,9 +67,9 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       notificationText = sharedPref?.getString(NOTIFICATION_TEXT_KEY, notificationText) ?: notificationText
       notificationImportance = sharedPref?.getInt(NOTIFICATION_IMPORTANCE_KEY, notificationImportance) ?: notificationImportance
       notificationIconName = sharedPref?.getString(NOTIFICATION_ICON_NAME_KEY, notificationIconName) ?: notificationIconName
+      notificationIconColor = sharedPref?.getString(NOTIFICATION_ICON_COLOR_KEY, notificationIconColor) ?: notificationIconColor
       notificationIconDefType = sharedPref?.getString(NOTIFICATION_ICON_DEF_TYPE_KEY, notificationIconDefType) ?: notificationIconDefType
       enableWifiLock = sharedPref?.getBoolean(ENABLE_WIFI_LOCK_KEY, false) ?: false
-      showBadge = sharedPref?.getBoolean(SHOW_BADGE_KEY, false) ?: false
     }
 
     fun saveNotificationConfiguration(context: Context?) {
@@ -83,9 +79,9 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
         this?.putString(NOTIFICATION_TEXT_KEY, notificationText)
         this?.putInt(NOTIFICATION_IMPORTANCE_KEY, notificationImportance)
         this?.putString(NOTIFICATION_ICON_NAME_KEY, notificationIconName)
+        this?.putString(NOTIFICATION_ICON_COLOR_KEY, notificationIconColor)
         this?.putString(NOTIFICATION_ICON_DEF_TYPE_KEY, notificationIconDefType)
         this?.putBoolean(ENABLE_WIFI_LOCK_KEY, enableWifiLock)
-        this?.putBoolean(SHOW_BADGE_KEY, showBadge)
         this?.apply()
       }
     }
@@ -120,24 +116,22 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
         val text = call.argument<String>(NOTIFICATION_TEXT_KEY)
         val importance = call.argument<Int>(NOTIFICATION_IMPORTANCE_KEY)
         val iconName = call.argument<String>(NOTIFICATION_ICON_NAME_KEY)
+        val iconColor = call.argument<String>(NOTIFICATION_ICON_COLOR_KEY)
         val iconDefType = call.argument<String>(NOTIFICATION_ICON_DEF_TYPE_KEY)
         val wifiLock = call.argument<Boolean>(ENABLE_WIFI_LOCK_KEY)
-        val badge = call.argument<Boolean>(SHOW_BADGE_KEY)
-        val requestBatteryOptimizationsOff = call.argument<Boolean>(SHOULD_REQUEST_BATTERY_OPTIMIZATIONS_OFF_KEY)
 
         // Set static values so the IsolateHolderService can use them later on to configure the notification
         notificationImportance = importance ?: notificationImportance
         notificationTitle = title ?: notificationTitle
         notificationText = text ?: notificationText
         notificationIconName = iconName ?: notificationIconName
+        notificationIconColor = iconColor ?: notificationIconColor
         notificationIconDefType = iconDefType ?: notificationIconDefType
         enableWifiLock = wifiLock ?: enableWifiLock
-        showBadge = badge ?: showBadge
-        shouldRequestBatteryOptimizationsOff = requestBatteryOptimizationsOff ?: shouldRequestBatteryOptimizationsOff
 
         saveNotificationConfiguration(context)
 
-        if (permissionHandler!!.isWakeLockPermissionGranted() && (!shouldRequestBatteryOptimizationsOff || permissionHandler!!.isIgnoringBatteryOptimizations())) {
+        if (permissionHandler!!.isWakeLockPermissionGranted() && permissionHandler!!.isIgnoringBatteryOptimizations()) {
           result.success(true)
           return
         }
@@ -148,8 +142,8 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           return
         }
 
-        // Ensure ignoring battery optimizations is enabled if requested
-        if (shouldRequestBatteryOptimizationsOff && !permissionHandler!!.isIgnoringBatteryOptimizations()) {
+        // Ensure ignoring battery optimizations is enabled
+        if (!permissionHandler!!.isIgnoringBatteryOptimizations()) {
           if (activity != null) {
             permissionHandler!!.requestBatteryOptimizationsOff(result, activity!!)
           } else {
@@ -162,7 +156,7 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
         if (!permissionHandler!!.isWakeLockPermissionGranted()) {
           result.error("PermissionError", "Please add the WAKE_LOCK permission to the AndroidManifest.xml in order to use background_sockets.", "")
           return
-        } else if (shouldRequestBatteryOptimizationsOff && !permissionHandler!!.isIgnoringBatteryOptimizations()) {
+        } else if (!permissionHandler!!.isIgnoringBatteryOptimizations()) {
           result.error("PermissionError", "The battery optimizations are not turned off.", "")
         } else {
           val intent = Intent(context, IsolateHolderService::class.java)
